@@ -341,6 +341,13 @@ func processEvent(chain uint64) {
 		t := core.GetBlockTime(chain)
 		if t+core.GetBlockInterval(chain) >= now {
 			return
+		} else {
+			// Rationale:
+			//   If there is no block and it's already much too late,
+			//   perhaps we should reissue the work.
+			//   This partially addresses the situation where
+			//   the nodes are really far behind.
+			go newBlockForMining(chain)
 		}
 		log.Printf("no next block key,chain:%d,index:%d\n", chain, index+1)
 		procMgr.mu.Lock()
@@ -394,15 +401,25 @@ func processEvent(chain uint64) {
 	stat.RunSuccessCount++
 	SaveBlockRunStat(chain, relia.Key[:], stat)
 	// doMining(chain)
-	if relia.Time+blockSyncTime < now {
-		go processEvent(chain)
-		return
-	}
 
-	if relia.Time+2*tMinute > now {
-		doMining(chain)
-		go newBlockForMining(chain)
-	}
+	// Rationale for removal:
+	//   Worst case we will generate a block
+	//   we will have to discard later, or a miner
+	//   will do some work on an old block.
+	//
+	// if relia.Time+blockSyncTime < now {
+	// 	go processEvent(chain)
+	// 	return
+	// }
+
+	// Rationale for removal of the conditional:
+	//   Worst case we will generate a block
+	//   we will have to discard later, or a miner
+	//   will do some work on an old block.
+	// if relia.Time+2*tMinute > now {
+	doMining(chain)
+	go newBlockForMining(chain)
+	// }
 
 	go processEvent(chain)
 }

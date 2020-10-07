@@ -426,9 +426,15 @@ func needBroadcastBlock(chain uint64, rel TReliability) bool {
 	var best TReliability
 	var dbKey = []byte("best")
 
-	if rel.Time+2*tMinute < getCoreTimeNow() {
-		return false
-	}
+	// Rationale for removal:
+	//   Worst case other nodes will discard it.
+	//   It creates some extra network traffic,
+	//   but congestion is the least of our worries
+	//   at this moment.
+	//
+	// if rel.Time+2*tMinute < getCoreTimeNow() {
+	// 	return false
+	// }
 
 	stream := ldb.LGet(chain, ldbStatus, dbKey)
 	if len(stream) > 0 {
@@ -460,9 +466,12 @@ func GetBlockForMining(chain uint64) *core.StBlock {
 		log.Println("fail to unmarshal.", err)
 		return nil
 	}
-	if out.Time+tMinute < getCoreTimeNow() {
-		return nil
-	}
+	// Rationale for removal:
+	//   worst case some will be mining an old block.
+	//
+	// if out.Time+tMinute < getCoreTimeNow() {
+	// 	return nil
+	// }
 	return &out
 }
 
